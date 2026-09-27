@@ -1,0 +1,8 @@
+{
+  "appId": "com.songbase.app",
+  "appName": "诗歌库",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

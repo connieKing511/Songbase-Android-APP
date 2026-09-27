@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">诗歌库</string>
+    <string name="title_activity_main">诗歌库</string>
+    <string name="package_name">com.songbase.app</string>
+    <string name="custom_url_scheme">com.songbase.app</string>
+</resources>
