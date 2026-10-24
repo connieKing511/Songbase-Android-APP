@@ -65,7 +65,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      <button className="btn-ghost relative px-3" onClick={() => setOpen((v) => !v)} aria-label="通知">
+      <button className="app-nav-btn relative" onClick={() => setOpen((v) => !v)} aria-label="通知">
         通知
         {unread > 0 && (
           <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-black px-1 text-center text-[10px] font-bold text-white">
@@ -108,36 +108,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto min-h-screen max-w-6xl px-3 pb-10 text-sm">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 py-3">
-        <Link to="/" className="text-lg font-semibold tracking-tight text-black">
+      <header className="app-header">
+        <Link to="/" className="app-brand shrink-0 text-lg font-semibold tracking-tight text-black">
           Songbase
         </Link>
-        <nav className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm">
-          <Link className="btn-ghost" to="/">
+        <nav className="app-nav">
+          <Link className="app-nav-btn" to="/">
             曲库
           </Link>
           {user && (
             <>
-              <Link className="btn-ghost" to="/upload">
+              <Link className="app-nav-btn" to="/upload">
                 上传
               </Link>
-              <Link className="btn-ghost" to="/mine">
+              <Link className="app-nav-btn" to="/mine">
                 我的投稿
+              </Link>
+              <Link className="app-nav-btn" to="/account">
+                账号
               </Link>
             </>
           )}
           {isAdmin && (
-            <Link className="btn-ghost" to="/admin">
+            <Link className="app-nav-btn" to="/admin">
               审核
             </Link>
           )}
           <NotificationBell />
           {user ? (
-            <button className="btn-ghost" onClick={() => signOut()}>
+            <button className="app-nav-btn" onClick={() => signOut()}>
               {profile?.username ?? "退出"}
             </button>
           ) : (
-            <Link className="btn-primary" to="/login">
+            <Link className="btn-primary app-nav-login" to="/login">
               登录
             </Link>
           )}

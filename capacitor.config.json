@@ -3,6 +3,7 @@
   "appName": "诗歌库",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "iosScheme": "https"
   }
 }

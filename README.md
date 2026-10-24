@@ -12,7 +12,7 @@
 ## 一次性配置 Supabase
 
 1. 打开项目 **SQL Editor**，把 `supabase/schema.sql` 全部粘贴执行。若上传时报 `permission denied for table songs`，再执行一次 `supabase/fix-grants.sql`。若项目已经建好、现在要加上四维分类，再执行 `supabase/migrate-taxonomy.sql`。若要让管理员能删除已入库歌曲，再执行 `supabase/migrate-admin-delete.sql`。
-2. **Authentication → Providers** 确认 Email 已开启。若收不到验证信，可暂时关闭 Confirm email；上线建议打开邮箱确认。
+2. **Authentication → Providers** 确认 Email 已开启，并**关闭 Confirm email**（否则仅用户名注册会因收不到内部邮箱验证信而无法登录）。绑定真实邮箱是可选的，在登录后「账号」页操作。密码重置仅对已绑定真实邮箱的账号有效。URL Configuration 的 Site URL 设为 `http://localhost:5173`，Redirect URLs 加上 `http://localhost:5173` 和 `http://localhost:5173/**`。若项目已在运行，再执行 `supabase/migrate-username-login.sql`。
 3. 在 **Project Settings → API** 复制 `Project URL` 和 `anon public` key。
 4. 在项目根目录：
 
@@ -47,6 +47,51 @@ npm run dev
 
 浏览器打开终端提示的地址（默认 http://localhost:5173 ）。
 
+## 给别人用网页版（免费上线）
+
+别人不能访问你电脑上的 `localhost`。需要把网站发布到网上，大家用同一个链接登录，数据和 App 仍是同一套 Supabase。
+
+推荐用 **Cloudflare Pages**（免费，国内相对容易打开）。GitHub Pages 在国内有时打不开。
+
+### 1. 发布到 Cloudflare Pages
+
+1. 打开 [https://dash.cloudflare.com](https://dash.cloudflare.com) 注册/登录（可用邮箱）。  
+2. 左侧 **Workers & Pages** → **Create** → **Pages** → 连接到 GitHub，选仓库 `Songbase-Android-APP`。  
+3. 构建设置：  
+   - Framework preset：无 / Vite  
+   - Build command：`npm run build`  
+   - Build output directory：`dist`  
+4. **Environment variables** 增加（和本地 `.env` 一样）：  
+   - `VITE_SUPABASE_URL`  
+   - `VITE_SUPABASE_ANON_KEY`  
+5. 保存并部署。完成后会得到类似 `https://xxxx.pages.dev` 的网址。把这个链接发给别人即可。
+
+以后往 GitHub 推送代码，Cloudflare 一般会自动重新部署。
+
+### 2. 在 Supabase 放行这个网址
+
+打开 **Authentication → URL Configuration**：
+
+- **Site URL** 改成你的线上地址，例如 `https://xxxx.pages.dev`  
+- **Redirect URLs** 里同时加上（每行一个）：  
+  - `https://xxxx.pages.dev`  
+  - `https://xxxx.pages.dev/**`  
+  - `http://localhost:5173`  
+  - `http://localhost:5173/**`  
+
+本地开发仍可保留 localhost。绑定邮箱、重置密码的跳转会用到这些地址。
+
+### 3. 可选：GitHub Pages
+
+仓库已包含 `.github/workflows/deploy-pages.yml`。
+
+1. GitHub 仓库 → **Settings → Secrets and variables → Actions**，添加 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY`。  
+2. **Settings → Pages** → Source 选 **GitHub Actions**。  
+3. 推送代码或手动跑该 workflow。  
+4. 地址形如 `https://connieKing511.github.io/Songbase-Android-APP/`，同样要加进 Supabase Redirect URLs。
+
+把最终网址发给别人：用浏览器打开 → 注册/登录 → 即可用曲库。管理员账号仍用你在 SQL 里设过的那个。
+
 ## 打包成安卓 App（Capacitor）
 
 网页功能会原样打进 APK，后端仍是同一套 Supabase。请先填好 `.env` 再打包，密钥会在 `npm run build` 时写进前端。
@@ -69,6 +114,34 @@ npm run open:android
 每次改完网页代码，再执行一次 `npm run build:android`，然后在 Android Studio 里重新 Run。不要只改网页却忘了 sync。
 
 说明：App 内通知仍是应用里的实时消息，不是手机系统推送。电脑上的 `npm run dev` 不受影响。
+
+## 打包成 iPhone App（Capacitor）
+
+功能和安卓、网页相同，仍连同一套 Supabase。工程里已经有 `ios` 目录。
+
+**必须在 Mac 上用 Xcode 编译。** Windows 不能生成可安装的 iOS 安装包（没有 Xcode / CocoaPods）。
+
+在 Mac 上：
+
+1. 安装 [Xcode](https://developer.apple.com/xcode/)（App Store），打开一次并同意许可。  
+2. 安装 CocoaPods：`sudo gem install cocoapods`  
+3. 把本项目拷到 Mac（或 git 拉取）。  
+4. 填好 `.env` 后执行：
+
+```bash
+cd 项目目录
+npm install
+npm run build:ios
+npm run open:ios
+```
+
+5. Xcode 顶部选你的 iPhone（用数据线连接，手机上信任此电脑）。  
+6. 选中左侧 **App** 工程 → **Signing & Capabilities** → 勾选 **Automatically manage signing**，Team 选你的 Apple ID（免费账号可以把 App 装到自己的手机，大约每 7 天要重装一次）。  
+7. 点 Run。第一次可能会提示在 iPhone：**设置 → 通用 → VPN 与设备管理** 里信任开发者证书。
+
+要发给别人或上架 App Store，需要加入 [Apple Developer Program](https://developer.apple.com/programs/)（付费），用 Archive / TestFlight，不能像安卓那样随便拷一个 ipa。
+
+每次改完网页，在 Mac 上再跑 `npm run build:ios`，然后 Xcode 里重新 Run。
 
 
 ## 功能对应

@@ -33,10 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session?.user) loadProfile(data.session.user.id).finally(() => setLoading(false));
       else setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
       if (next?.user) loadProfile(next.user.id);
       else setProfile(null);
+      if (event === "PASSWORD_RECOVERY") {
+        window.location.hash = "#/reset-password";
+      }
     });
     return () => {
       mounted = false;

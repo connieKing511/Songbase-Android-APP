@@ -60,6 +60,22 @@ select.field option {
   @apply btn border border-neutral-300 bg-white text-black hover:bg-neutral-50;
 }
 
+.app-header {
+  @apply flex flex-nowrap items-center gap-2 overflow-hidden border-b border-neutral-200 py-3;
+}
+
+.app-nav {
+  @apply min-w-0 flex-1 flex flex-nowrap items-center gap-1.5 overflow-x-auto;
+}
+
+.app-nav-btn {
+  @apply btn-ghost whitespace-nowrap;
+}
+
+.app-nav-login {
+  @apply whitespace-nowrap;
+}
+
 .card {
   @apply rounded-lg border border-neutral-200 bg-white;
 }

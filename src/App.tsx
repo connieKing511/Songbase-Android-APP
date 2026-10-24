@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout, RequireAdmin, RequireAuth } from "./components/Layout";
 import { AuthForm } from "./components/AuthForm";
 import { LibraryPage } from "./pages/LibraryPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { AccountPage } from "./pages/AccountPage";
 import { SongDetailPage } from "./pages/SongDetailPage";
 import { UploadPage } from "./pages/UploadPage";
 import { MinePage } from "./pages/MinePage";
@@ -26,6 +28,15 @@ export default function App() {
         <Route path="/" element={<LibraryPage />} />
         <Route path="/login" element={<AuthForm mode="login" />} />
         <Route path="/register" element={<AuthForm mode="register" />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          path="/account"
+          element={
+            <RequireAuth>
+              <AccountPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/upload"
           element={
