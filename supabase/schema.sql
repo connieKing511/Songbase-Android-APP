@@ -51,6 +51,14 @@ create table if not exists public.notifications (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.comments (
+  id uuid primary key default gen_random_uuid(),
+  song_id uuid not null references public.songs (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  body text not null check (char_length(btrim(body)) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+
 create index if not exists songs_status_idx on public.songs (status);
 create index if not exists songs_tags_idx on public.songs using gin (tags);
 create index if not exists songs_category_idx on public.songs (category);
@@ -60,6 +68,7 @@ create index if not exists songs_era_idx on public.songs (era);
 create index if not exists songs_familiarity_idx on public.songs (familiarity);
 create index if not exists songs_created_idx on public.songs (created_at desc);
 create index if not exists notifications_user_idx on public.notifications (user_id, created_at desc);
+create index if not exists comments_song_idx on public.comments (song_id, created_at);
 
 create or replace function public.is_admin()
 returns boolean
@@ -245,6 +254,7 @@ create trigger on_song_reviewed
 alter table public.profiles enable row level security;
 alter table public.songs enable row level security;
 alter table public.notifications enable row level security;
+alter table public.comments enable row level security;
 
 drop policy if exists "profiles readable" on public.profiles;
 create policy "profiles readable" on public.profiles
@@ -298,11 +308,39 @@ create policy "notifications update own" on public.notifications
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
+drop policy if exists "comments select approved songs" on public.comments;
+create policy "comments select approved songs" on public.comments
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.songs s
+      where s.id = song_id
+        and (s.status = 'approved' or s.uploader_id = auth.uid() or public.is_admin())
+    )
+  );
+
+drop policy if exists "comments insert on approved" on public.comments;
+create policy "comments insert on approved" on public.comments
+  for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.songs s
+      where s.id = song_id and s.status = 'approved'
+    )
+  );
+
+drop policy if exists "comments delete own or admin" on public.comments;
+create policy "comments delete own or admin" on public.comments
+  for delete to authenticated
+  using (user_id = auth.uid() or public.is_admin());
+
 -- Table privileges (required on newer Supabase projects; RLS still limits rows)
 grant usage on schema public to anon, authenticated;
 grant select, update on table public.profiles to authenticated;
 grant select, insert, update, delete on table public.songs to authenticated;
 grant select, update on table public.notifications to authenticated;
+grant select, insert, delete on table public.comments to authenticated;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.resolve_login_email(text) to anon, authenticated;
 grant execute on function public.username_taken(text) to anon, authenticated;
@@ -322,7 +360,14 @@ exception
   when duplicate_object then null;
 end $$;
 
--- Promote the first admin after you register (change the email):
+do $$
+begin
+  alter publication supabase_realtime add table public.comments;
+exception
+  when duplicate_object then null;
+end $$;
+
+-- Promote admins after they register (repeat for each username; multiple admins allowed):
 -- update public.profiles
 -- set role = 'admin'
--- where id = (select id from auth.users where email = 'you@example.com');
+-- where lower(username) = lower('目标用户名');

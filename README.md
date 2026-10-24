@@ -11,7 +11,7 @@
 
 ## 一次性配置 Supabase
 
-1. 打开项目 **SQL Editor**，把 `supabase/schema.sql` 全部粘贴执行。若上传时报 `permission denied for table songs`，再执行一次 `supabase/fix-grants.sql`。若项目已经建好、现在要加上四维分类，再执行 `supabase/migrate-taxonomy.sql`。若要让管理员能删除已入库歌曲，再执行 `supabase/migrate-admin-delete.sql`。
+1. 打开项目 **SQL Editor**，把 `supabase/schema.sql` 全部粘贴执行。若上传时报 `permission denied for table songs`，再执行一次 `supabase/fix-grants.sql`。若项目已经建好、现在要加上四维分类，再执行 `supabase/migrate-taxonomy.sql`。若要让管理员能删除已入库歌曲，再执行 `supabase/migrate-admin-delete.sql`。若要在歌曲详情页评论，再执行 `supabase/migrate-comments.sql`。
 2. **Authentication → Providers** 确认 Email 已开启，并**关闭 Confirm email**（否则仅用户名注册会因收不到内部邮箱验证信而无法登录）。绑定真实邮箱是可选的，在登录后「账号」页操作。密码重置仅对已绑定真实邮箱的账号有效。URL Configuration 的 Site URL 设为 `http://localhost:5173`，Redirect URLs 加上 `http://localhost:5173` 和 `http://localhost:5173/**`。若项目已在运行，再执行 `supabase/migrate-username-login.sql`。
 3. 在 **Project Settings → API** 复制 `Project URL` 和 `anon public` key。
 4. 在项目根目录：
@@ -27,7 +27,46 @@ VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-5. 先注册一个账号，再到 SQL Editor 把该用户提成管理员（可设多名）：
+5. 先让账号在网页或 App 里完成注册，再到 SQL Editor 把该用户提成管理员。**可以设多名管理员**，每人各执行一次（详见下面「设立管理员」）。
+
+6. **Database → Replication** 确认 `songs` 和 `notifications` 已加入 `supabase_realtime`（脚本里已 `alter publication`；若报错说已存在可忽略）。
+
+## 设立管理员
+
+应用里没有「设管理员」按钮，必须在 Supabase **SQL Editor** 改 `profiles.role`。`role` 只有两种：`user`（默认）和 `admin`。**任意数量的账号都可以同时是管理员**，审核通知会发给每一位管理员。
+
+1. 对方先用自己的**用户名**注册并成功登录一次（这样 `profiles` 里才会有这一行）。
+2. 打开 [Supabase Dashboard](https://supabase.com/dashboard) → 你的项目 → 左侧 **SQL Editor** → New query。
+3. 把下面的 `目标用户名` 换成对方在注册时填的用户名（大小写不敏感），然后 Run：
+
+```sql
+update public.profiles
+set role = 'admin'
+where lower(username) = lower('目标用户名');
+```
+
+4. 用下面语句确认结果。`role` 为 `admin` 即成功。对方**重新登录**（或刷新页面）后，导航里会出现「审核」。
+
+```sql
+select username, role, created_at
+from public.profiles
+order by username;
+```
+
+再设第二、第三个管理员时，重复第 1–4 步即可，把用户名换成另一个账号。不要改别人已有的 `admin` 行。
+
+取消某人的管理员（变回普通用户）：
+
+```sql
+update public.profiles
+set role = 'user'
+where lower(username) = lower('目标用户名');
+```
+
+说明：
+
+- 用用户名匹配即可，不必填邮箱。仅用户名注册时，Auth 里的邮箱是内部地址，不适合用来查找。
+- 若该用户已在「账号」页绑定了真实邮箱，也可以按邮箱设管理员：
 
 ```sql
 update public.profiles
@@ -35,7 +74,7 @@ set role = 'admin'
 where id = (select id from auth.users where email = 'you@example.com');
 ```
 
-6. **Database → Replication** 确认 `songs` 和 `notifications` 已加入 `supabase_realtime`（脚本里已 `alter publication`；若报错说已存在可忽略）。
+- 普通用户无法在网页里把自己改成管理员（数据库有触发器保护）。只有能打开 SQL Editor 的人（项目所有者）能改角色。
 
 ## 本地启动
 
@@ -90,7 +129,7 @@ npm run dev
 3. 推送代码或手动跑该 workflow。  
 4. 地址形如 `https://connieKing511.github.io/Songbase-Android-APP/`，同样要加进 Supabase Redirect URLs。
 
-把最终网址发给别人：用浏览器打开 → 注册/登录 → 即可用曲库。管理员账号仍用你在 SQL 里设过的那个。
+把最终网址发给别人：用浏览器打开 → 注册/登录 → 即可用曲库。需要审核权限时，按上面「设立管理员」用 SQL 把对应**用户名**设为 `admin`（可设多人）。
 
 ## 打包成安卓 App（Capacitor）
 
@@ -152,7 +191,8 @@ npm run open:ios
 | 分类 + 关键词检索 | 内容性质、速度、年代；熟悉度由已带次数自动计算（0–15 不太熟悉，16–30 较熟悉，>30 熟悉） |
 | 多用户 + 全员同步通知 | 审核通过时数据库触发器给每位用户写 `notifications`，前端 Realtime 订阅 |
 | 管理员审核后入库 | `status`: pending → approved/rejected；仅 approved 出现在公共曲库 |
-| 多名管理员 | `profiles.role = 'admin'`，用上面的 SQL 可设多人 |
+| 多名管理员 | `profiles.role = 'admin'`，按「设立管理员」对每个用户名各执行一次即可 |
+| 歌曲评论 | 详情页发表评论，发出即公开；作者可删自己的，管理员可删任意评论 |
 
 ## 审核与通知流程
 
@@ -160,7 +200,7 @@ npm run open:ios
 2. 管理员通过 → 状态 `approved` → **所有用户**收到「新歌入库」通知，曲库列表自动刷新。
 3. 管理员拒绝 → 仅投稿人收到原因。
 
-未审核内容不会进入公共曲库，避免未通过的资料同步给所有人。
+未审核内容不会进入公共曲库，避免未通过的资料同步给所有人。已入库歌曲的评论不经过审核。
 
 ## 免费额度说明
 

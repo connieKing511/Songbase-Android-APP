@@ -6,6 +6,7 @@ import { StatusBadge } from "../components/Layout";
 import { TaxonomyBadges } from "../components/TaxonomyBadges";
 import { songFamiliarity } from "../lib/taxonomy";
 import { useAuth } from "../lib/auth";
+import { SongComments } from "../components/SongComments";
 
 export function SongDetailPage() {
   const { id } = useParams();
@@ -76,6 +77,7 @@ export function SongDetailPage() {
         <h2 className="text-lg font-semibold">歌词</h2>
         <pre className="mt-3 whitespace-pre-wrap font-sans leading-8 text-neutral-800">{song.lyrics || "暂无歌词"}</pre>
       </div>
+      <SongComments songId={song.id} songStatus={song.status} />
       {isAdmin && song.status === "approved" && (
         <div className="mt-8">
           <button

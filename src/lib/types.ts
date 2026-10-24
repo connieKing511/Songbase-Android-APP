@@ -33,6 +33,15 @@ export type Song = {
   uploader?: Profile;
 };
 
+export type SongComment = {
+  id: string;
+  song_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  author?: Pick<Profile, "username"> | null;
+};
+
 export type NotificationItem = {
   id: string;
   user_id: string;
